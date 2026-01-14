@@ -21,110 +21,154 @@ public class DancingRobot {
     private Material material;
 
     private SGNode robotRoot;
-    private TransformNode robotMoveTranslate;
-    private TransformNode sphere1Rotate, sphere2Rotate, sphere3Rotate, headRotate;
-    
-    // Arm transform nodes
-    private TransformNode leftArmRotate, rightArmRotate;
+
+    private TransformNode robotMoveTranslate,
+                          sphere1Rotate, 
+                          sphere2Rotate, 
+                          sphere3Rotate, 
+                          headRotate, 
+                          antennaRotate,
+                          leftArmRotate,
+                          rightArmRotate,
+                          leftEyeRotate,
+                          rightEyeRotate;
+
     private boolean isDancing = false;
-
-    // Eye transform nodes
-    private TransformNode leftEyeRotate, rightEyeRotate;
-
-    // Antenna transform node
-    private TransformNode antennaRotate;
 
     private float rotationAngle = 0.0f;
 
     public DancingRobot(GL3 gl, Camera camera, Light light, Texture t1) {
+        System.out.println("DancingRobot NEW CODE running: " + System.currentTimeMillis());
         this.camera = camera;
         this.light = light;
         this.sphere = makeSphere(gl, t1);
 
         buildRobot();
     }
-
-    // Creating robot components
-    private void buildRobot() {
-        robotRoot = new NameNode("robot root");
-        robotMoveTranslate = new TransformNode("robot translate", Mat4Transform.translate(0, 0, 0));
-
-        // Sphere 1 (Base Layer)
-        sphere1Rotate = new TransformNode("sphere1 rotate", Mat4Transform.rotateAroundX(0)); // No initial rotation
-        NameNode sphere1 = makeSphereLayer("sphere1", Mat4Transform.scale(0.4f, 1.5f, 0.4f), Mat4Transform.translate(0, 0.5f, 0));
-
-        // Sphere 2 (Middle Layer)
-        sphere2Rotate = new TransformNode("sphere2 rotate", Mat4Transform.translate(0, 0, 0)); // No initial rotation
-        NameNode sphere2 = makeSphereLayer("sphere2", Mat4Transform.scale(0.4f, 1.5f, 0.4f), Mat4Transform.translate(0, 1.5f, 0));
-
-        // Sphere 3 (Top Layer)
-        sphere3Rotate = new TransformNode("sphere3 rotate", Mat4Transform.translate(0, 0, 0)); // No initial rotation
-        NameNode sphere3 = makeSphereLayer("sphere3", Mat4Transform.scale(0.4f, 1.5f, 0.4f), Mat4Transform.translate(0, 2.5f, 0));
-
-        // Head
-        headRotate = new TransformNode("head rotate", Mat4Transform.translate(0, 0f, 0)); // No initial rotation
-        NameNode head = makeSphereLayer("head", Mat4Transform.scale(1.5f, 1.5f, 1.5f), Mat4Transform.translate(0, 3.5f, 0));
-
-        // Left Arm
-        leftArmRotate = new TransformNode("left arm rotate", Mat4Transform.translate(0, 0, 0)); // No initial rotation
-        NameNode leftArm = makeSphereLayer("leftArm", Mat4Transform.scale(2f, 0.4f, 0.4f), Mat4Transform.translate(-0.6f, 9.5f, 0));  // Positioned to the left of sphere3
-
-        // Right Arm
-        rightArmRotate = new TransformNode("right arm rotate", Mat4Transform.translate(0, 0, 0)); // No initial rotation
-        NameNode rightArm = makeSphereLayer("rightArm", Mat4Transform.scale(2f, 0.4f, 0.4f), Mat4Transform.translate(0.6f, 9.5f, 0)); // Positioned to the right of sphere3
-
-        // Left Eye
-        leftEyeRotate = new TransformNode("left eye rotate", Mat4Transform.translate(-0.2f, 0, 0)); // No initial rotation
-        NameNode leftEye = makeSphereLayer("leftEye", Mat4Transform.scale(0.2f, 0.2f, 0.2f), Mat4Transform.translate(-0.4f, 25f, 3.6f));  // Positioned to the left side of the head
-
-        // Right Eye
-        rightEyeRotate = new TransformNode("right eye rotate", Mat4Transform.translate(0.2f, 0, 0)); // No initial rotation
-        NameNode rightEye = makeSphereLayer("rightEye", Mat4Transform.scale(0.2f, 0.2f, 0.2f), Mat4Transform.translate(0.4f, 25f, 3.6f));  // Positioned to the right side of the head
-
-        // Antenna
-        antennaRotate = new TransformNode("antenna rotate", Mat4Transform.translate(0, 0, 0)); // Positioned above the head
-        NameNode antenna = makeSphereLayer("antenna", Mat4Transform.scale(0.2f, 0.8f, 0.2f), Mat4Transform.translate(0, 8f, 0)); // Small sphere for antenna
-
-        // Assembling the robot
-        robotRoot.addChild(robotMoveTranslate);
-        robotMoveTranslate.addChild(sphere1Rotate);
-        sphere1Rotate.addChild(sphere1);
-        sphere1.addChild(sphere2Rotate);
-        sphere2Rotate.addChild(sphere2);
-        sphere2.addChild(sphere3Rotate);
-        sphere3Rotate.addChild(sphere3);
-        sphere3.addChild(headRotate);
-        headRotate.addChild(head);
-
-        // Add the arms to the top sphere (sphere3)
-        sphere3.addChild(leftArmRotate);
-        leftArmRotate.addChild(leftArm);
-        sphere3.addChild(rightArmRotate);
-        rightArmRotate.addChild(rightArm);
-
-        // Add the eyes to the head (head)
-        head.addChild(leftEyeRotate);
-        leftEyeRotate.addChild(leftEye);
-        head.addChild(rightEyeRotate);
-        rightEyeRotate.addChild(rightEye);
-
-        // Add the antenna to the head (head)
-        head.addChild(antennaRotate);
-        antennaRotate.addChild(antenna);
-
-        robotRoot.update(); // Finalize the transformations
+    
+    private static class Part {
+        NameNode root;
+        TransformNode attach; // where children will be connected
+        Part(NameNode root, TransformNode attach) {
+            this.root = root;
+            this.attach = attach;
+        }
     }
 
-    private NameNode makeSphereLayer(String name, Mat4 scale, Mat4 translate) {
+    private void buildRobot() {
+
+        robotRoot = new NameNode("robot root");
+        robotMoveTranslate = new TransformNode("robot translate", Mat4Transform.translate(-1.8f, 0, -1.5f));
+
+        // Root attachment
+        robotRoot.addChild(robotMoveTranslate);
+
+        Part sphere1 = makeSpherePart("sphere1",
+            Mat4Transform.scale(0.4f, 1.5f, 0.4f),
+            Mat4Transform.translate(0, 0.8f, 0)
+        );
+
+        Part sphere2 = makeSpherePart("sphere2",
+            Mat4Transform.scale(0.4f, 1.5f, 0.4f),
+            Mat4Transform.translate(0, 1.2f, 0)   // relative step
+        );
+
+        Part sphere3 = makeSpherePart("sphere3",
+            Mat4Transform.scale(0.4f, 1.5f, 0.4f),
+            Mat4Transform.translate(0, 1.2f, 0)   // relative step
+        );
+
+        // Insert a rotation node between the robot's world translation and sphere1
+        sphere1Rotate = new TransformNode("sphere1 rotate", Mat4Transform.rotateAroundZ(0));
+
+        robotMoveTranslate.addChild(sphere1Rotate);
+        sphere1Rotate.addChild(sphere1.root);
+
+        // Continue the true local stacking via attach points
+        sphere2Rotate = new TransformNode("sphere2 rotate", Mat4Transform.rotateAroundZ(0));
+
+        sphere1.attach.addChild(sphere2Rotate);
+        sphere2Rotate.addChild(sphere2.root);
+        
+        sphere3Rotate = new TransformNode("sphere3 rotate", Mat4Transform.rotateAroundZ(0));
+        sphere2.attach.addChild(sphere3Rotate);
+        sphere3Rotate.addChild(sphere3.root);
+
+
+        // --- Head (attached to sphere3, and head will have children so use Part) ---
+        Part head = makeSpherePart("head",
+            Mat4Transform.scale(1.5f, 1.5f, 1.5f),
+            Mat4Transform.translate(0, 1.3f, 0)   // local offset from sphere3 top area
+        );
+        headRotate = new TransformNode("head rotate", Mat4Transform.rotateAroundZ(0));
+
+        sphere3.attach.addChild(headRotate);
+        headRotate.addChild(head.root);
+
+        // --- Arms (attached to sphere3) ---
+        Part leftArm = makeSpherePart("leftArm",
+            Mat4Transform.scale(1.2f, 0.25f, 0.25f),
+            Mat4Transform.translate(-0.9f, 0.6f, 0f)
+        );
+        leftArmRotate = new TransformNode("leftArm rotate", Mat4Transform.rotateAroundZ(0));
+
+        sphere3.attach.addChild(leftArmRotate);
+        leftArmRotate.addChild(leftArm.root);
+
+        Part rightArm = makeSpherePart("rightArm",
+            Mat4Transform.scale(1.2f, 0.25f, 0.25f),
+            Mat4Transform.translate(0.9f, 0.6f, 0f)
+        );
+        rightArmRotate = new TransformNode("rightArm rotate", Mat4Transform.rotateAroundZ(0));
+
+        sphere3.attach.addChild(rightArmRotate);
+        rightArmRotate.addChild(rightArm.root);
+
+        // --- Eyes (attached to head) ---
+        Part leftEye = makeSpherePart("leftEye",
+            Mat4Transform.scale(0.2f, 0.2f, 0.2f),
+            Mat4Transform.translate(-0.45f, 0.25f, 0.95f)
+        );
+        leftEyeRotate = new TransformNode("leftEye rotate", Mat4Transform.rotateAroundY(0));
+
+        head.attach.addChild(leftEyeRotate);
+        leftEyeRotate.addChild(leftEye.root);
+
+        Part rightEye = makeSpherePart("rightEye",
+            Mat4Transform.scale(0.2f, 0.2f, 0.2f),
+            Mat4Transform.translate(0.45f, 0.25f, 0.95f)
+        );
+        rightEyeRotate = new TransformNode("rightEye rotate", Mat4Transform.rotateAroundY(0));
+
+        head.attach.addChild(rightEyeRotate);
+        rightEyeRotate.addChild(rightEye.root);
+
+        // --- Antenna (attached to head) ---
+        Part antenna = makeSpherePart("antenna",
+            Mat4Transform.scale(0.15f, 0.7f, 0.15f),
+            Mat4Transform.translate(0f, 1.0f, 0f)
+        );
+        antennaRotate = new TransformNode("antenna rotate", Mat4Transform.rotateAroundX(0));
+
+        head.attach.addChild(antennaRotate);
+        antennaRotate.addChild(antenna.root);
+
+        robotRoot.update();
+    }
+
+
+    private Part makeSpherePart(String name, Mat4 scale, Mat4 translate) {
         NameNode node = new NameNode(name);
         TransformNode scaleNode = new TransformNode(name + " scale", scale);
         TransformNode translateNode = new TransformNode(name + " translate", translate);
+        TransformNode attachNode = new TransformNode(name + " attach", Mat4Transform.translate(0, 0, 0));
         ModelNode modelNode = new ModelNode(name + " shape", sphere);
 
-        node.addChild(scaleNode);
-        scaleNode.addChild(translateNode);
-        translateNode.addChild(modelNode);
-        return node;
+        node.addChild(translateNode);
+        translateNode.addChild(scaleNode);
+        scaleNode.addChild(modelNode);
+        translateNode.addChild(attachNode);
+        return new Part(node, attachNode);
     }
 
     private Model makeSphere(GL3 gl, Texture t1) {
@@ -156,18 +200,49 @@ public class DancingRobot {
         );
     }
 
+    /*private void animateParts(float time) {
+
+    // Base spheres (slow twist)
+    sphere1Rotate.setTransform(Mat4Transform.rotateAroundY((float)Math.sin(time) * 5f));
+    sphere2Rotate.setTransform(Mat4Transform.rotateAroundY((float)Math.sin(time + 1) * 8f));
+    sphere3Rotate.setTransform(Mat4Transform.rotateAroundY((float)Math.sin(time + 2) * 10f));
+
+    // Head nodding
+    headRotate.setTransform(Mat4Transform.rotateAroundX((float)Math.sin(time * 1.5f) * 10f));
+
+    // Arms swinging
+    leftArmRotate.setTransform(Mat4Transform.rotateAroundZ((float)Math.sin(time * 2f) * 30f));
+    rightArmRotate.setTransform(Mat4Transform.rotateAroundZ((float)-Math.sin(time * 2f) * 30f));
+
+    // Eyes subtle movement
+    leftEyeRotate.setTransform(Mat4Transform.rotateAroundY((float)Math.sin(time * 3f) * 5f));
+    rightEyeRotate.setTransform(Mat4Transform.rotateAroundY((float)-Math.sin(time * 3f) * 5f));
+
+    // Antenna wiggle
+    antennaRotate.setTransform(Mat4Transform.rotateAroundZ((float)Math.sin(time * 4f) * 20f));
+    }*/
+
 
     float swayAngle = 0.0f;
     float swaySpeed = 25.0f;
     float maxSwayAngle = 15.0f;
 
-    // Updates the rotation angle for continuous swaying-like motion
     public void update(float deltaTime) {
-        swayAngle += deltaTime * 5f;
-        float rotation = (float) Math.sin(swayAngle) * maxSwayAngle;
-        Mat4 combinedTransform = Mat4.multiply(Mat4Transform.translate(-1.8f, 0, -1.5f), Mat4Transform.rotateAroundX(rotation));
-        robotMoveTranslate.setTransform(combinedTransform);
-        robotRoot.update(); // Update the scene graph with new transforms
+        // Static robot for Increment 0
+        swayAngle += deltaTime * 2.0f; // speed 
+
+        float sway = (float)Math.sin(swayAngle) * maxSwayAngle;
+        sphere1Rotate.setTransform(Mat4Transform.rotateAroundZ(-sway));
+        sphere2Rotate.setTransform(Mat4Transform.rotateAroundZ(sway));
+        sphere3Rotate.setTransform(Mat4Transform.rotateAroundZ(-sway));
+        headRotate.setTransform(Mat4Transform.rotateAroundZ(sway));
+        leftArmRotate.setTransform(Mat4Transform.rotateAroundZ(sway));
+        rightArmRotate.setTransform(Mat4Transform.rotateAroundZ(-sway));
+        leftEyeRotate.setTransform(Mat4Transform.rotateAroundY(-sway));
+        rightEyeRotate.setTransform(Mat4Transform.rotateAroundY(sway));
+        antennaRotate.setTransform(Mat4Transform.rotateAroundX(-sway));
+
+        robotRoot.update();
     }
 
     private float lastTime = System.nanoTime() / 1000000.0f;
