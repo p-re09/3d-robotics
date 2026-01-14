@@ -1,0 +1,66 @@
+#version 330 core
+
+in vec3 aPos;
+in vec3 aNormal;
+in vec2 aTexCoord;
+
+out vec4 fragColor;
+
+uniform sampler2D first_texture;
+uniform vec3 viewPos;
+
+struct Light {
+  vec3 position;
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+};
+
+uniform Light light;  
+
+struct Material {
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+  float shininess;
+}; 
+  
+uniform Material material;
+
+void main() {
+  // ambient
+  vec3 ambient = light.ambient * texture(first_texture, aTexCoord).rgb;
+  
+  // diffuse
+  vec3 norm = normalize(aNormal);
+  vec3 lightDir = normalize(light.position - aPos);  
+  float diff = max(dot(norm, lightDir), 0.0);
+  vec3 diffuse = light.diffuse * diff * texture(first_texture, aTexCoord).rgb;
+  
+  // specular 
+  vec3 viewDir = normalize(viewPos - aPos);
+  vec3 reflectDir = reflect(-lightDir, norm);  
+  float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+  vec3 specular = light.specular * spec * material.specular;
+
+  vec3 result = ambient + diffuse + specular;
+  fragColor = vec4(result, 1.0);
+}
+
+uniform vec3 spotlight.direction; // Direction of the spotlight
+uniform vec3 spotlight.position;  // Position of the spotlight
+
+void main() {
+    vec3 lightDir = normalize(spotlight.position - fragPosition); // Vector from the fragment to the light
+    float theta = dot(lightDir, normalize(-spotlight.direction)); // Angle between lightDir and spotlight.direction
+
+    if (theta > cos(spotlight.cutOffAngle)) {
+        // Calculate light effect within the cone
+        float intensity = pow(theta, spotlight.spotExponent);
+        vec3 diffuse = intensity * lightColor * max(dot(normal, lightDir), 0.0);
+        vec3 specular = ...; // Calculate specular lighting if needed
+        fragColor = vec4(ambient + diffuse + specular, 1.0);
+    } else {
+        fragColor = vec4(ambient, 1.0); // Ambient-only outside the cone
+    }
+}
